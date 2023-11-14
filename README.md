@@ -2,6 +2,8 @@
 
 This repo provides a scaffold for defining a map service in a Kubernetes or Docker environment. It is not a complete project as it lacks security controls, scaling procedures and others.
 
+It uses Postgres, QGIS-server and Mapproxy.
+
 <br>
 
 ## **Docker**
@@ -42,6 +44,7 @@ Create a storage-class:
     storageclass.storage.k8s.io/qgis-static-storage created
 
 Create a pv:
+
     k8s/storage $ kubectl  apply -f postgres-qgis-data.yaml 
     persistentvolume/postgres-qgis-data created
 
