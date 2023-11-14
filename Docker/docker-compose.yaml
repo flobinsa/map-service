@@ -1,0 +1,90 @@
+version: "3.9"
+
+networks:
+  map-service:
+    driver: bridge
+
+services:
+  init-project:
+    image: busybox
+    command: "sh /files/init.sh"
+    networks:
+      - map-service
+    env_file:
+      - ./.env
+    volumes:
+      - ./files:/files
+      - ${DIRECTORY_PATH}/postgresql-common:/etc/postgresql-common
+      - ${DIRECTORY_PATH}/qgis-data:/qgis-data
+      - ${DIRECTORY_PATH}/mapproxy-data:/mapproxy-data
+  postgis:
+    image: postgis/postgis
+    restart: always
+    environment:
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - PGDATA=$POSTGRES_DATA
+    volumes:
+      - ${DIRECTORY_PATH}/dbdata:/dbdata
+    ports:
+      - 30432:5432
+    networks:
+      - map-service
+    logging:
+        driver: "json-file"
+        options:
+          max-size: "10m"
+          max-file: "5"
+    depends_on:
+      init-project:
+        condition: service_completed_successfully
+  qgis:
+    image: docker-repo.softrust.ro/qgis-server
+    restart: always
+    environment:
+      - NGINX_ENABLE=true
+      - QGIS_SERVER_PARALLEL_RENDERING=true
+      - QGIS_SERVER_LOG_LEVEL=0
+    volumes:
+      - ${DIRECTORY_PATH}/postgresql-common:/etc/postgresql-common
+      - ${DIRECTORY_PATH}/qgis-data:/data
+    ports:
+      - 5555:5555
+      - 32080:8080
+    healthcheck:
+      test: bash -c 'printf "GET / HTTP/1.1\n\n" > /dev/tcp/127.0.0.1/5555'
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - map-service
+    logging:
+        driver: "json-file"
+        options:
+          max-size: "10m"
+          max-file: "5"
+    depends_on:
+      init-project:
+        condition: service_completed_successfully
+  mapproxy:
+    image: flobinsa/mapproxy
+    restart: always
+    environment:
+      - QGIS_URL=http://qgis:8080/ows/?MAP=/data/romania.qgs
+    volumes:
+      - ${DIRECTORY_PATH}/mapproxy-data:/opt/mapproxy/cache_dir
+    ports:
+      - 9090:9090
+    networks:
+      - map-service
+    logging:
+        driver: "json-file"
+        options:
+          max-size: "10m"
+          max-file: "5"
+    depends_on:
+      qgis:
+        condition: service_healthy
+      init-project:
+        condition: service_completed_successfully

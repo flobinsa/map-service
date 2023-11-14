@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mapproxy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      myLabel: mapproxy
+  template:
+    metadata:
+      labels:
+        myLabel: mapproxy
+    spec:
+      containers:
+        - name: mapproxy
+          image: flobinsa/mapproxy:latest
+          imagePullPolicy: Always
+          env:
+            - name: QGIS_URL
+              value: 'http://qgis-service/ows/?MAP=/data/rum.qgs'
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: cache-data
+              mountPath: /opt/mapproxy/cache_dir
+      volumes:
+        - name: cache-data
+          nfs:
+            server: 10.18.0.2
+            path: /nfs_data/mapproxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mapproxy-service
+spec:
+  type: NodePort
+  selector:
+    myLabel: mapproxy
+  ports:
+    - port: 80
+      targetPort: 9090
+      nodePort: 30090
+

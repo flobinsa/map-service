@@ -1,0 +1,10 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Delete
+metadata:
+    labels:
+        app.kubernetes.io/instance: local-storage
+        app.kubernetes.io/name: qgis-static-storage
+    name: qgis-static-storage
+

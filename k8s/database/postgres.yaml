@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-primary
+spec:
+  replicas: 1
+  serviceName: postgres-primary
+  selector:
+    matchLabels:
+      myLabel: postgres-primary
+  template:
+    metadata:
+      labels:
+        myLabel: postgres-primary
+    spec:
+      containers:
+        - name: postgres-server
+          image: postgis/postgis
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: PGDATA
+          volumeMounts:
+            - name: data
+              mountPath: /dbdata
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 25Gi
+        storageClassName: qgis-static-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primary
+spec:
+  type: NodePort
+  selector:
+    myLabel: postgres-primary
+  ports:
+    - port: 5432
+      targetPort: 5432
+      nodePort: 31432

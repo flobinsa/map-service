@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qgis
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      myLabel: qgis
+  template:
+    metadata:
+      labels:
+        myLabel: qgis
+    spec:
+      containers:
+        - name: qgis
+          image: flobinsa/qgis-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5555
+            - containerPort: 8080
+          env:
+            - name: NGINX_ENABLE
+              value: 'true'
+            - name: QGIS_SERVER_PARALLEL_RENDERING
+              value: 'true'
+            - name: QGIS_SERVER_LOG_LEVEL
+              value: '0'
+          volumeMounts:
+            - name: postgres-config-file
+              mountPath: /etc/postgresql-common/
+              readOnly: true
+            - name: qgs-resources
+              mountPath: /data
+      volumes:
+        - name: postgres-config-file
+          secret:
+            secretName: postgres-secret
+            items:
+              - key: pg_service.conf
+                path: pg_service.conf
+        - name: qgs-resources
+          nfs:
+            server: 10.18.0.2
+            path: /nfs_data/qgs/qgs-resources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qgis-service
+spec:
+  type: NodePort
+  selector:
+    myLabel: qgis
+  ports:
+    - name: "qgis-fcgi"
+      port: 5555
+      targetPort: 5555
+      nodePort: 31080
+    - name: "nginx-alt-http"
+      port: 80
+      targetPort: 8080
+      nodePort: 32080
+

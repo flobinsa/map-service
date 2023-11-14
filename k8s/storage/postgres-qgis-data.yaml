@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app.kubernetes.io/storage-class: qgis-static-storage
+  name: postgres-qgis-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 45Gi
+  local:
+    path: /static-storage/postgres-qgis-data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - worker-01
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: qgis-static-storage
