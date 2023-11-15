@@ -40,7 +40,7 @@ services:
       init-project:
         condition: service_completed_successfully
   qgis:
-    image: docker-repo.softrust.ro/qgis-server
+    image: flobinsa/qgis-server
     restart: always
     environment:
       - NGINX_ENABLE=true
